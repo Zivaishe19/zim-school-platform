@@ -1,0 +1,21 @@
+name: Bug
+description: Something is broken
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "**Security issue or possible data leak between schools/users?** Do NOT file it here. Follow SECURITY.md."
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce (use seeded demo accounts, never real student data)
+    validations: { required: true }
+  - type: input
+    id: role
+    attributes:
+      label: Role and device (e.g. Parent, Android phone)

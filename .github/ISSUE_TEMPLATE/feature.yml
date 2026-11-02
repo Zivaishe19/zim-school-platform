@@ -1,0 +1,36 @@
+name: Feature
+description: A unit of work for one pull request
+labels: [feature]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Purpose
+      description: What should a user be able to do, and why?
+    validations: { required: true }
+  - type: textarea
+    id: roles
+    attributes:
+      label: Roles and permissions
+      description: Who can see or change this? Which relationships limit it (own class, own children...)?
+    validations: { required: true }
+  - type: textarea
+    id: data
+    attributes:
+      label: Database changes
+      description: Tables/columns in platform_core or the school schema.
+  - type: textarea
+    id: security
+    attributes:
+      label: Security and privacy implications
+  - type: textarea
+    id: tests
+    attributes:
+      label: Tests required
+      description: Including isolation and authorization cases.
+    validations: { required: true }
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: Milestone
+      options: ["1 Foundation", "2 School and students", "3 Academic", "4 Communication", "5 Administration", "6 Scheduling", "7 Production"]

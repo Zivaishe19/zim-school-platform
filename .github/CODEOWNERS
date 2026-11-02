@@ -1,0 +1,13 @@
+# Replace the placeholder team below with your GitHub organisation team (or two named
+# developers' usernames) before enabling "Require review from Code Owners".
+# These paths decide who can see which school's data: changes need two reviewers.
+
+/src/server/tenancy/    @YOUR-ORG/security-reviewers
+/src/server/auth/       @YOUR-ORG/security-reviewers
+/src/server/rbac/       @YOUR-ORG/security-reviewers
+/src/server/db/         @YOUR-ORG/security-reviewers
+/drizzle/               @YOUR-ORG/security-reviewers
+/tests/isolation/       @YOUR-ORG/security-reviewers
+/src/proxy.ts           @YOUR-ORG/security-reviewers
+/scripts/lib/backup.ts  @YOUR-ORG/security-reviewers
+/.github/               @YOUR-ORG/security-reviewers

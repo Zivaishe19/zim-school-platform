@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, types, tests, build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      NODE_ENV: test
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Write CI environment files (throwaway keys, CI database only)
+        run: |
+          gen() { node -e "console.log(require('crypto').randomBytes($1).toString('$2'))"; }
+          cat > .env.test <<EOF
+          PLATFORM_DATABASE_URL=postgres://platform_app:platform_app_ci@localhost:5432/platform_core_test
+          PLATFORM_MIGRATOR_URL=postgres://postgres:ci-only-password@localhost:5432/platform_core_test
+          PLATFORM_APP_PASSWORD=platform_app_ci
+          PROVISIONER_DATABASE_URL=postgres://postgres:ci-only-password@localhost:5432/postgres
+          SCHOOL_DB_HOST=localhost
+          SCHOOL_DB_PORT=5432
+          SCHOOL_DB_PREFIX=test_school_
+          SCHOOL_DB_ENCRYPTION_KEY=$(gen 32 base64)
+          BACKUP_ENCRYPTION_KEY=$(gen 32 base64)
+          BETTER_AUTH_SECRET=$(gen 48 base64url)
+          BETTER_AUTH_URL=http://localhost:3000
+          EOF
+          sed -e 's/platform_core_test/platform_core/g' -e 's/test_school_/school_/' -e 's/^AUTH_SIGNIN.*//' .env.test > .env
+          echo "AUTH_SIGNIN_MAX_PER_MINUTE=100" >> .env
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Unit, integration and isolation tests (real Postgres)
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Dependency audit (high and critical)
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Seed dev database for end-to-end tests
+        env:
+          NODE_ENV: development
+        run: npm run db:setup && npm run db:seed
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end tests against the production build
+        env:
+          NODE_ENV: production
+        run: |
+          npx next start -p 3000 > next.log 2>&1 &
+          npx wait-on -t 60000 http://localhost:3000/login
+          npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-artifacts
+          path: |
+            test-results/
+            next.log
+          retention-days: 7
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high

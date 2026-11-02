@@ -1,0 +1,36 @@
+# Local development services. Run the app itself with `npm run dev` on your machine.
+#   docker compose up -d
+# Then use the default values in .env.example (Postgres on 5432, PgBouncer on 6432).
+# To test through PgBouncer like production, set SCHOOL_DB_PORT=6432 in .env.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: devpostgres # development only
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      AUTH_TYPE: scram-sha-256
+      AUTH_USER: postgres
+      AUTH_QUERY: SELECT usename, passwd FROM pg_shadow WHERE usename=$$1
+      DB_USER: postgres
+      DB_PASSWORD: devpostgres
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: "2000"
+      DEFAULT_POOL_SIZE: "5"
+      MAX_PREPARED_STATEMENTS: "200"
+    ports: ["6432:5432"]
+
+volumes:
+  pgdata:

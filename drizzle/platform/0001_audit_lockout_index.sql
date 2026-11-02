@@ -1,0 +1,1 @@
+CREATE INDEX "platform_audit_action_target_idx" ON "platform_audit_event" USING btree ("action","target_id","at");
